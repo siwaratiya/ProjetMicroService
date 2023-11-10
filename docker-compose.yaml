@@ -1,0 +1,211 @@
+version: "3.9"
+services:
+  eureka:
+    container_name: eureka
+    hostname: serviceregistry
+    build: ./Eureka-discovery
+    ports:
+      - "8761:8761"
+    image: "eureka"
+    networks:
+      - spring-network
+
+  api-gateway:
+    container_name: api-gateway
+    build:
+      context: ./Api-Gateway
+    ports:
+      - "8088:8088"
+    image: "api-gateway"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://serviceregistry:8761/eureka/
+    depends_on:
+      - eureka
+    networks:
+      - spring-network
+
+  stock-service:
+    container_name: stock-service
+    build: StockService
+    ports:
+      - "8180:8180"
+    image: "stock-service"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-mysql:3306/biochar-database?autoReconnect=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka
+    depends_on:
+      - eureka
+      - db-mysql
+      - api-gateway
+    networks:
+      - spring-network
+
+  appointment-service:
+    container_name: appointment-service
+    build: Appointment-Service
+    ports:
+      - "6791:6791"
+    image: "appointment-service"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-mysql:3306/biochar-database?autoReconnect=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka
+    depends_on:
+      - eureka
+      - db-mysql
+      - api-gateway
+    networks:
+      - spring-network
+
+
+  hr-service:
+    container_name: hr-service
+    build: Hr-Service
+    ports:
+      - "6891:6891"
+    image: "hr-service"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-mysql:3306/biochar-database?autoReconnect=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka
+    depends_on:
+      - eureka
+      - db-mysql
+      - api-gateway
+    networks:
+      - spring-network
+
+  analyse-service:
+    container_name: analyse-service
+    build: ServiceAnalyse
+    ports:
+      - "6579:6579"
+    image: "analyse-service"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:~/Analyse-servic
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD:
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka
+      spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.H2Dialect
+    depends_on:
+      - eureka
+      - api-gateway
+    networks:
+      - spring-network
+
+  commande-service:
+    container_name: commande-service
+    build: Commande
+    ports:
+      - "7459:7459"
+    image: "commande-service"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:~/commande-service
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD:
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka
+      spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.H2Dialect
+    depends_on:
+      - eureka
+      - api-gateway
+    networks:
+      - spring-network
+
+  user-service:
+    container_name: user-service
+    build: user-service
+    ports:
+      - "6992:6992"
+    image: "user-service"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:~/user
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD:
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka
+      spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.H2Dialect
+    depends_on:
+      - eureka
+      - api-gateway
+    networks:
+      - spring-network
+
+  keycloak:
+    container_name: keycloak
+    image: "quay.io/keycloak/keycloak:22.0.4"
+    ports:
+      - "8181:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://db-mysql:3306/keycloak?autoReconnect=true&useSSL=false
+      KC_DB_USERNAME: root
+      KC_DB_PASSWORD: root
+    networks:
+      - spring-network
+    depends_on:
+      - db-mysql
+    command: [ "start-dev" ]
+
+  internship-service:
+    container_name: internship-service
+    build: internship-service
+    ports:
+      - "36516:36516"
+      - "36517:36517"
+    environment:
+      ASPNETCORE_HTTP_PORT: "36517"
+      ASPNETCORE_URLS: "http://+:36516"
+    depends_on:
+      - eureka
+      - api-gateway
+      - mongo
+    networks:
+      - spring-network
+
+
+  mongo:
+    image: mongo:latest
+    container_name: biochar-mongodb
+    volumes:
+      - mongodata:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - spring-network
+
+
+  db-mysql:
+    image: "mysql:5.6"
+    container_name: db-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: biochar-database
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    networks:
+      - spring-network
+
+networks:
+  spring-network:
+
+volumes:
+  mongodata:
